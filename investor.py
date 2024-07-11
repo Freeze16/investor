@@ -2,8 +2,8 @@ import os
 import csv
 
 import pylab
-from numpy import array
-from numpy.linalg import solve
+from numpy import array, column_stack
+from numpy.linalg import solve, matrix_rank, LinAlgError
 
 
 class Stocks:
@@ -105,7 +105,8 @@ class Stocks:
     def analyze(self) -> dict[float, list[float]]:
         ws = {}
         for self.r in self.interval:
-            w = self.count_shares().tolist()
+            try:
+                w = self.count_shares().tolist()
             # Закоменчено условие, при котором все доли в отрезке от 0 до 1
             # flag = True
             # for i in w:
@@ -113,7 +114,9 @@ class Stocks:
             #         flag = False
             #         break
             # if flag:
-            ws[self.r] = w
+                ws[self.r] = w
+            except AttributeError:
+                continue
 
         return ws
 
@@ -150,17 +153,25 @@ class Stocks:
 
         old_matrix = array(matrix)
         old_extend = array(extend)
-        matrix = []
+        new_matrix = []
         for line in old_matrix.tolist():
-            matrix.append([round(el, 3) for el in line])
-        extend = [str(round(i, 3)) for i in array(old_extend).tolist()]
-        printable_extend = ['|' + str(i) for i in extend]
+            new_matrix.append([round(el, 3) for el in line])
+        new_extend = [str(round(i, 3)) for i in array(old_extend).tolist()]
+        printable_extend = ['|' + str(i) for i in new_extend]
 
         for index in range(len(matrix)):
-            matrix[index].append(printable_extend[index])
+            new_matrix[index].append(printable_extend[index])
         print(*matrix, sep='\n')
 
-        return solve(old_matrix, old_extend)[:-2]
+        try:
+            return solve(old_matrix, old_extend)[:-2]
+        except LinAlgError:
+            rang_matrix1 = matrix_rank(matrix)
+            rang_matrix2 = matrix_rank(column_stack((matrix, extend)))
+            if rang_matrix1 == rang_matrix2 and rang_matrix1 < matrix.shape[1]:
+                return "Система имеет бесконечно много решений"
+            else:
+                return "Система не имеет решения"
 
     # Формируем матрицу
     def create_matrix(self):
@@ -233,8 +244,8 @@ if __name__ == '__main__':
     # data = {
     #     'A': [-0.49, 0.41, 0.53, 0.98, 0.12, 0.19, 1.16, 1.65, -0.72, -1.75, 0.11, 1.58, -0.32, -1.52, -2.61, -0.31,
     #           0.62, -1.73, -2.03, -0.44, 1.24, -0.35, -0.19],
-    #     'B': [-1.01, 0.34, 0.04, 0.23, 2.15, -1.10, 0.52, 0.58, -1.72, -6.53, -3.79, -0.21, -3.27, -1.00, -3.69, 0.04,
-    #           0.33, -3.07, 1.22, -1.83, 0.77, -0.86, -0.13],
+    #     'B': [-0.49, 0.41, 0.53, 0.98, 0.12, 0.19, 1.16, 1.65, -0.72, -1.75, 0.11, 1.58, -0.32, -1.52, -2.61, -0.31,
+    #           0.62, -1.73, -2.03, -0.44, 1.24, -0.35, -0.19],
     #     'C': [-0.61, 0.70, -0.24, 1.50, -0.69, -0.28, 1.86, -1.05, -1.50, -1.03, 0.66, -1.34, -0.10, -0.31, -2.30,
     #           -0.68, 0.72, -2.31, -8.07, -5.30, 1.96, -2.82, 0.84]
     # }
